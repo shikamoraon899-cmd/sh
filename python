@@ -1,0 +1,54 @@
+from flask import Flask, render_template, request, jsonify
+
+app = Flask(__name__)
+
+parking_data = {
+    "slot1": "Available",
+    "slot2": "Available",
+    "slot3": "Available",
+    "slot4": "Available"
+}
+
+
+@app.route('/')
+def home():
+    occupied = 0
+    available = 0
+
+    for value in parking_data.values():
+        if value == "Occupied":
+            occupied += 1
+        else:
+            available += 1
+
+    return render_template(
+        "index.html",
+        slots=parking_data,
+        occupied=occupied,
+        available=available
+    )
+
+
+@app.route('/update', methods=['POST'])
+def update():
+
+    parking_data["slot1"] = request.form.get("slot1")
+    parking_data["slot2"] = request.form.get("slot2")
+    parking_data["slot3"] = request.form.get("slot3")
+    parking_data["slot4"] = request.form.get("slot4")
+
+    print(parking_data)
+
+    return jsonify({
+        "status": "success",
+        "message": "Parking data updated"
+    })
+
+
+@app.route('/api')
+def api():
+    return jsonify(parking_data)
+
+
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=5000, debug=True)
