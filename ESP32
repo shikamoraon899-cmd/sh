@@ -1,0 +1,135 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+// WiFi Credentials
+const char* ssid = "YOUR_WIFI_NAME";
+const char* password = "YOUR_WIFI_PASSWORD";
+
+// Flask Server URL
+const char* serverName = "http://YOUR_SERVER_IP:5000/update";
+
+// Ultrasonic Sensor Pins
+#define TRIG1 5
+#define ECHO1 18
+
+#define TRIG2 17
+#define ECHO2 16
+
+#define TRIG3 4
+#define ECHO3 2
+
+#define TRIG4 15
+#define ECHO4 13
+
+long duration;
+float distance;
+
+void setup() {
+
+  Serial.begin(115200);
+
+  pinMode(TRIG1, OUTPUT);
+  pinMode(ECHO1, INPUT);
+
+  pinMode(TRIG2, OUTPUT);
+  pinMode(ECHO2, INPUT);
+
+  pinMode(TRIG3, OUTPUT);
+  pinMode(ECHO3, INPUT);
+
+  pinMode(TRIG4, OUTPUT);
+  pinMode(ECHO4, INPUT);
+
+  WiFi.begin(ssid, password);
+
+  Serial.print("Connecting");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println();
+  Serial.println("WiFi Connected");
+}
+
+float readDistance(int trigPin, int echoPin) {
+
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+
+  digitalWrite(trigPin, LOW);
+
+  duration = pulseIn(echoPin, HIGH);
+
+  distance = duration * 0.034 / 2;
+
+  return distance;
+}
+
+String slotStatus(float distance) {
+
+  if(distance < 10)
+      return "Occupied";
+  else
+      return "Available";
+}
+
+void sendData(String s1,String s2,String s3,String s4){
+
+    if(WiFi.status()==WL_CONNECTED){
+
+        HTTPClient http;
+
+        http.begin(serverName);
+
+        http.addHeader("Content-Type","application/x-www-form-urlencoded");
+
+        String data="slot1="+s1+
+                    "&slot2="+s2+
+                    "&slot3="+s3+
+                    "&slot4="+s4;
+
+        int response=http.POST(data);
+
+        Serial.print("HTTP Response : ");
+        Serial.println(response);
+
+        http.end();
+    }
+
+}
+
+void loop() {
+
+  float d1=readDistance(TRIG1,ECHO1);
+  float d2=readDistance(TRIG2,ECHO2);
+  float d3=readDistance(TRIG3,ECHO3);
+  float d4=readDistance(TRIG4,ECHO4);
+
+  String slot1=slotStatus(d1);
+  String slot2=slotStatus(d2);
+  String slot3=slotStatus(d3);
+  String slot4=slotStatus(d4);
+
+  Serial.println("----------------------------");
+
+  Serial.print("Slot 1 : ");
+  Serial.println(slot1);
+
+  Serial.print("Slot 2 : ");
+  Serial.println(slot2);
+
+  Serial.print("Slot 3 : ");
+  Serial.println(slot3);
+
+  Serial.print("Slot 4 : ");
+  Serial.println(slot4);
+
+  sendData(slot1,slot2,slot3,slot4);
+
+  delay(3000);
+}
